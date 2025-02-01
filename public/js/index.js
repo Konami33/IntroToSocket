@@ -1,55 +1,60 @@
 const socket = io();
 
-const onlineUsers = document.getElementById('online-users');
-const messageReceived = document.getElementById('message-received');
-const messageSent = document.getElementById('message-sent');
+let userName = prompt("Enter your name:") || "Anonymous"; // Ask user for name
+socket.emit('set-name', userName); // Send to server
+
 const chatBox = document.getElementById('chat-box');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
 
-
-
-socket.on('onlineUsers', (data) => {
-    console.log(data);
-    onlineUsers.innerText = `Online Users: ${data}`;
+socket.on('onlineUsers', (count) => {
+    document.getElementById('online-users').textContent = `Online Users: ${count}`;
 });
 
-// sendButton.addEventListener('click', (e) => {
-//     e.preventDefault();
-//     sendMessage();
-// });
+sendButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    sendMessage();
+});
 
 messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
-        e.preventDefault();
         sendMessage();
     }
 });
 
 function sendMessage() {
+
+    if (messageInput.value.trim() === '') {
+        return;
+    }
+
     const message = {
         text: messageInput.value,
-        sender: socket.id,
-        dataTime: new Date().toLocaleString()
-    }
-    console.log(message);
+        sender: userName, // Send username
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
     socket.emit('message', message);
     addMessageToChat(message, true);
     messageInput.value = '';
-}   
+}
 
 function addMessageToChat(message, isSender) {
-    const messageElement = document.createElement('div');
-    messageElement.classList.add(isSender ? 'sent' : 'received');
-    messageElement.innerHTML = `<strong>${isSender ? 'You' : message.sender}:</strong> ${message.text}`;
-    chatBox.appendChild(messageElement);
+    const messageContainer = document.createElement('div');
+    messageContainer.classList.add('message-container', isSender ? 'sent' : 'received');
+
+    messageContainer.innerHTML = `
+        <div class="message-info">
+            <span class="sender-name">${message.sender}</span>
+            <span class="message-time">${message.timestamp}</span>
+        </div>
+        <div class="message-bubble">${message.text}</div>
+    `;
+
+    chatBox.appendChild(messageContainer);
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+// Receive message from server
 socket.on('chat-message', (message) => {
     addMessageToChat(message, false);
 });
-
-
-
-

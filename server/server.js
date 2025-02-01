@@ -11,27 +11,23 @@ const server = app.listen(port, () => {
 
 const io = require('socket.io')(server);
 
-io.on('connection', onConnection);
-
 let onlineUsers = new Map();
 
-function onConnection(socket) {
-    // console.log('A new user connected: ', socket.id);
-    onlineUsers.set(socket.id, {id: socket.id}); // Add the user to the set to keep track of online users
-    //console.log('Online users: ', onlineUsers);
-    io.emit('onlineUsers', onlineUsers.size);
-    // console.log('Online users: ', onlineUsers.size);
+io.on('connection', (socket) => {
+    console.log('A new user connected: ', socket.id);
 
-
-    socket.on('disconnect', () => {
-        onlineUsers.delete(socket.id); // Remove the user from the set when they disconnect
+    socket.on('set-name', (name) => {
+        onlineUsers.set(socket.id, name);
         io.emit('onlineUsers', onlineUsers.size);
     });
 
+    socket.on('disconnect', () => {
+        onlineUsers.delete(socket.id);
+        io.emit('onlineUsers', onlineUsers.size);
+    });
 
     socket.on('message', (message) => {
         socket.broadcast.emit('chat-message', message);
     });
-}
-
+});
 

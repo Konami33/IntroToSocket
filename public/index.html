@@ -9,16 +9,23 @@
 </head>
 <body>
     <div class="chat-container">
+        <!-- Header Section -->
         <div class="header">
-            <span id="online-users">Online Users: </span>
+            <h3 id="online-users">Online Users:</h3>
         </div>
+
+        <!-- Chat Messages Display -->
         <div id="chat-box" class="chat-box">
+            <!-- Messages will be dynamically added here -->
         </div>
-        <div class="input-box">
-            <input id="message-input" type="text" placeholder="Type a message...">
+
+        <!-- Input Box -->
+        <div class="input-container">
+            <input id="message-input" type="text" placeholder="Type a message..." autocomplete="off">
             <button id="send-button">Send</button>
         </div>
     </div>
+
     <script src="js/index.js"></script>
 </body>
 </html>

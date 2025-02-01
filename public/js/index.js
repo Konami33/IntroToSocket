@@ -1,28 +1,55 @@
 const socket = io();
 
-const messageInput = document.getElementById('messageInput');
-const sendButton = document.getElementById('sendButton');
-const messages = document.getElementById('messages');
+const onlineUsers = document.getElementById('online-users');
+const messageReceived = document.getElementById('message-received');
+const messageSent = document.getElementById('message-sent');
+const chatBox = document.getElementById('chat-box');
+const messageInput = document.getElementById('message-input');
+const sendButton = document.getElementById('send-button');
 
-socket.on('connect', () => {
-    console.log('Connected to the server');
+
+
+socket.on('onlineUsers', (data) => {
+    console.log(data);
+    onlineUsers.innerText = `Online Users: ${data}`;
 });
 
-// Send a message to the server
-sendButton.addEventListener('click', () => {
-    const message = messageInput.value; // Get the message from the input field
-    socket.emit('message', message); // Send the message to the server
-    messageInput.value = ''; // Clear the input field
+// sendButton.addEventListener('click', (e) => {
+//     e.preventDefault();
+//     sendMessage();
+// });
+
+messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        sendMessage();
+    }
 });
 
-// Receive messages from the server
-socket.on('message', (msg) => { // Listen for the 'message' event
-    const li = document.createElement('li');
-    li.textContent = msg;
-    messages.appendChild(li);
+function sendMessage() {
+    const message = {
+        text: messageInput.value,
+        sender: socket.id,
+        dataTime: new Date().toLocaleString()
+    }
+    console.log(message);
+    socket.emit('message', message);
+    addMessageToChat(message, true);
+    messageInput.value = '';
+}   
+
+function addMessageToChat(message, isSender) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add(isSender ? 'sent' : 'received');
+    messageElement.innerHTML = `<strong>${isSender ? 'You' : message.sender}:</strong> ${message.text}`;
+    chatBox.appendChild(messageElement);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+socket.on('chat-message', (message) => {
+    addMessageToChat(message, false);
 });
 
 
-socket.on('disconnect', () => {
-    console.log('Disconnected from the server');
-});
+
+

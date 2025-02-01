@@ -8,17 +8,16 @@
     <script src="/socket.io/socket.io.js"></script> <!-- Socket.io client library -->
 </head>
 <body>
+    <script src="js/index.js"></script>
     <div class="chat-container">
-        <div class="header">
-            <span id="online-users">Online Users: </span>
-        </div>
-        <div id="chat-box" class="chat-box">
+        <div class="chat-box">
+            <div class="message received">Hello!</div>
+            <div class="message sent">Hi there!</div>
         </div>
         <div class="input-box">
-            <input id="message-input" type="text" placeholder="Type a message...">
-            <button id="send-button">Send</button>
+            <input type="text" placeholder="Type a message...">
+            <button>Send</button>
         </div>
     </div>
-    <script src="js/index.js"></script>
 </body>
 </html>

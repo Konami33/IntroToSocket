@@ -7,6 +7,13 @@ const chatBox = document.getElementById('chat-box');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
 
+const roomInput = document.getElementById('room-input');
+const createRoomBtn = document.getElementById('create-room');
+const roomSelect = document.getElementById('room-select');
+const currentRoomDisplay = document.getElementById('current-room');
+
+let currentRoom = null;
+
 // to display online users
 socket.on('onlineUsers', (count) => {
     document.getElementById('online-users').textContent = `Online Users: ${count}`;
@@ -23,11 +30,48 @@ messageInput.addEventListener('keypress', (e) => {
     }
 });
 
+createRoomBtn.addEventListener('click', () => {
+    const roomName = roomInput.value.trim();
+    if (roomName) {
+        socket.emit('create-room', roomName);
+        roomInput.value = '';
+    }
+});
+
+roomSelect.addEventListener('change', () => {
+    const selectedRoom = roomSelect.value;
+    if (selectedRoom) {
+        joinRoom(selectedRoom);
+    }
+});
+
+function joinRoom(roomName) {
+    currentRoom = roomName;
+    socket.emit('join-room', roomName);
+    currentRoomDisplay.textContent = `Current Room: ${roomName}`;
+    chatBox.innerHTML = ''; // Clear chat when joining new room
+}
+
+socket.on('update-rooms', (rooms) => {
+    roomSelect.innerHTML = '<option value="">Select a room...</option>';
+    rooms.forEach(room => {
+        const option = document.createElement('option');
+        option.value = room;
+        option.textContent = room;
+        roomSelect.appendChild(option);
+    });
+});
+
+socket.on('room-users', (data) => {
+    if (data.room === currentRoom) {
+        document.getElementById('online-users').textContent = 
+            `Online Users in ${data.room}: ${data.count}`;
+    }
+});
+
 // send message to server
 function sendMessage() {
-
-    // check if message is empty
-    if (messageInput.value.trim() === '') {
+    if (messageInput.value.trim() === '' || !currentRoom) {
         return;
     }
 

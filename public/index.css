@@ -127,3 +127,40 @@ body {
 #send-button:hover {
     background-color: #006edc;
 }
+
+.room-controls {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+#room-input {
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+#room-select {
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    min-width: 150px;
+}
+
+#create-room {
+    background-color: #0084ff;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#create-room:hover {
+    background-color: #006edc;
+}
+
+#current-room {
+    margin: 5px 0;
+    color: white;
+}

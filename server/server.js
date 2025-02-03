@@ -19,6 +19,9 @@ io.on('connection', (socket) => {
     console.log('A new user connected: ', socket.id);
     let currentRoom = null;
 
+    // Send the list of rooms to the client
+    socket.emit('update-rooms', Array.from(rooms.keys()));
+
     // set the userName
     socket.on('set-name', (name) => {
         onlineUsers.set(socket.id, name);

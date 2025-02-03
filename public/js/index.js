@@ -7,6 +7,7 @@ const chatBox = document.getElementById('chat-box');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
 
+// to display online users
 socket.on('onlineUsers', (count) => {
     document.getElementById('online-users').textContent = `Online Users: ${count}`;
 });
@@ -22,12 +23,15 @@ messageInput.addEventListener('keypress', (e) => {
     }
 });
 
+// send message to server
 function sendMessage() {
 
+    // check if message is empty
     if (messageInput.value.trim() === '') {
         return;
     }
 
+    // create message object
     const message = {
         text: messageInput.value,
         sender: userName, // Send username
@@ -42,6 +46,7 @@ function addMessageToChat(message, isSender) {
     const messageContainer = document.createElement('div');
     messageContainer.classList.add('message-container', isSender ? 'sent' : 'received');
 
+    // create message container
     messageContainer.innerHTML = `
         <div class="message-info">
             <span class="sender-name">${message.sender}</span>
@@ -50,6 +55,7 @@ function addMessageToChat(message, isSender) {
         <div class="message-bubble">${message.text}</div>
     `;
 
+    // add message to chat box
     chatBox.appendChild(messageContainer);
     chatBox.scrollTop = chatBox.scrollHeight;
 }

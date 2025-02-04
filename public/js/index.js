@@ -1,7 +1,5 @@
 const socket = io();
 
-let userName = prompt("Enter your name:") || "Anonymous"; // Ask user for name
-socket.emit('set-name', userName); // Send to server
 
 // DOM elements
 const chatBox = document.getElementById('chat-box');
@@ -13,8 +11,47 @@ const roomSelect = document.getElementById('room-select');
 const currentRoomDisplay = document.getElementById('current-room');
 const userNameDisplay = document.getElementById('user-name');
 
-// set the user name
-userNameDisplay.textContent = userName;
+let userName = null;
+
+// Function to handle username input
+async function setUsername() {
+    
+    const name = prompt("Enter your name:") || "";
+    if (name.trim()) {
+        // Emit set-name event and wait for response
+        socket.emit('set-name', name.trim(), (response) => {
+            if (response.success) {
+                userName = name.trim();
+                userNameDisplay.textContent = userName;
+                // Enable chat functionality after successful username set
+                enableChat();
+            } else {
+                alert(response.error || 'Username is already taken. Please choose another.');
+            }
+        });
+    }
+    
+}
+
+// Function to enable chat functionality
+function enableChat() {
+    messageInput.disabled = false;
+    sendButton.disabled = false;
+    roomInput.disabled = false;
+    createRoomBtn.disabled = false;
+    roomSelect.disabled = false;
+}
+
+
+// Initially disable chat functionality
+messageInput.disabled = true;
+sendButton.disabled = true;
+roomInput.disabled = true;
+createRoomBtn.disabled = true;
+roomSelect.disabled = true;
+
+// Start the app by setting username
+setUsername();
 
 let currentRoom = null;
 
@@ -37,15 +74,20 @@ messageInput.addEventListener('keypress', (e) => {
 
 // handle room creation
 createRoomBtn.addEventListener('click', () => {
-    const roomName = roomInput.value.trim(); // get the room name from the input
+    const roomName = roomInput.value.trim();
     if (roomName) {
-        socket.emit('create-room', roomName); // send the room name to the server under the create-room event
-        roomInput.value = ''; // clear the room input
+        socket.emit('create-room', roomName, (response) => {
+            if (!response.success) {
+                alert(response.error || 'Failed to create room');
+            }
+            roomInput.value = '';
+        });
     }
 });
 
 roomSelect.addEventListener('change', () => {
     const selectedRoom = roomSelect.value; // get the selected room from the dropdown
+    console.log(selectedRoom);
     if (selectedRoom) {
         joinRoom(selectedRoom); // join the selected room
     }
@@ -53,19 +95,27 @@ roomSelect.addEventListener('change', () => {
 
 // Handle room joining
 function joinRoom(roomName) {
+    console.log('Joining room:', roomName);
     currentRoom = roomName;
     socket.emit('join-room', roomName); // send the room name to the server under the join-room event
     currentRoomDisplay.textContent = `Current Room: ${roomName}`; // update the current room display
     chatBox.innerHTML = ''; // Clear chat when joining new room
 }
 
+// Add handler for previous messages
+socket.on('previous-messages', (messages) => {
+    messages.reverse().forEach(message => {
+        addMessageToChat(message, message.sender === userName);
+    });
+});
+
 // Handle room updates
 socket.on('update-rooms', (rooms) => {
     roomSelect.innerHTML = '<option value="">Select a room...</option>'; // clear the room select dropdown
     rooms.forEach(room => { // for each room, create an option and add it to the dropdown
         const option = document.createElement('option');
-        option.value = room;
-        option.textContent = room;
+        option.value = room.name;
+        option.textContent = `${room.name} (Created by ${room.createdBy})`;
         roomSelect.appendChild(option); // add the option to the dropdown
     });
 });
@@ -80,19 +130,18 @@ socket.on('room-users', (data) => { // handle the room users event
 
 // send message to server
 function sendMessage() {
-    if (messageInput.value.trim() === '' || !currentRoom) { // if the message is empty or the user is not in a room
+    if (messageInput.value.trim() === '' || !currentRoom || !userName) {
         return;
     }
 
-    // create message object
     const message = {
         text: messageInput.value,
-        sender: userName, // Send username
+        sender: userName,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    socket.emit('message', message); // send the message to the server under the message event
-    addMessageToChat(message, true); // add the message to the chat
-    messageInput.value = ''; // clear the message input
+    socket.emit('message', message);
+    addMessageToChat(message, true);
+    messageInput.value = '';
 }
 
 // add message to chat

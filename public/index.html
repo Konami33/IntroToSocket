@@ -11,14 +11,21 @@
     <div class="chat-container">
         <!-- Header Section -->
         <div class="header">
-            <h3 id="user-name">Anonymous</h3>
-            <h3 id="online-users">Online Users:</h3>
+            <div class="user-info">
+                <h3 id="user-name">Anonymous</h3>
+                <h3 id="online-users">Online Users:</h3>
+            </div>
             <div class="room-controls">
-                <input id="room-input" type="text" placeholder="Room name...">
-                <button id="create-room">Create Room</button>
-                <select id="room-select">
-                    <option value="">Select a room...</option>
-                </select>
+                <div class="room-creation">
+                    <input id="room-input" type="text" placeholder="Create new room...">
+                    <button id="create-room">Create Room</button>
+                </div>
+                <div class="room-selection">
+                    <label for="room-select">Join Room:</label>
+                    <select id="room-select">
+                        <option value="">Select a room...</option>
+                    </select>
+                </div>
             </div>
             <h4 id="current-room"></h4>
         </div>

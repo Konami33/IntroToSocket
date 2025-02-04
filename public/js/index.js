@@ -1,5 +1,9 @@
-const socket = io();
-
+const userName = localStorage.getItem('username');
+const socket = io({
+    auth: {
+        username: userName
+    }
+});
 
 // DOM elements
 const chatBox = document.getElementById('chat-box');
@@ -11,26 +15,16 @@ const roomSelect = document.getElementById('room-select');
 const currentRoomDisplay = document.getElementById('current-room');
 const userNameDisplay = document.getElementById('user-name');
 
-let userName = null;
+let currentRoom = null;
 
-// Function to handle username input
-async function setUsername() {
-    
-    const name = prompt("Enter your name:") || "";
-    if (name.trim()) {
-        // Emit set-name event and wait for response
-        socket.emit('set-name', name.trim(), (response) => {
-            if (response.success) {
-                userName = name.trim();
-                userNameDisplay.textContent = userName;
-                // Enable chat functionality after successful username set
-                enableChat();
-            } else {
-                alert(response.error || 'Username is already taken. Please choose another.');
-            }
-        });
+// Check if user is authenticated
+function checkAuth() {
+    if (!userName) {
+        window.location.href = '/auth.html';
+        return;
     }
-    
+    userNameDisplay.textContent = userName;
+    enableChat();
 }
 
 // Function to enable chat functionality
@@ -42,7 +36,6 @@ function enableChat() {
     roomSelect.disabled = false;
 }
 
-
 // Initially disable chat functionality
 messageInput.disabled = true;
 sendButton.disabled = true;
@@ -50,10 +43,8 @@ roomInput.disabled = true;
 createRoomBtn.disabled = true;
 roomSelect.disabled = true;
 
-// Start the app by setting username
-setUsername();
-
-let currentRoom = null;
+// Start the app by checking authentication
+checkAuth();
 
 // to display online users
 socket.on('onlineUsers', (count) => {
@@ -86,10 +77,9 @@ createRoomBtn.addEventListener('click', () => {
 });
 
 roomSelect.addEventListener('change', () => {
-    const selectedRoom = roomSelect.value; // get the selected room from the dropdown
-    console.log(selectedRoom);
+    const selectedRoom = roomSelect.value;
     if (selectedRoom) {
-        joinRoom(selectedRoom); // join the selected room
+        joinRoom(selectedRoom);
     }
 });
 
@@ -97,9 +87,9 @@ roomSelect.addEventListener('change', () => {
 function joinRoom(roomName) {
     console.log('Joining room:', roomName);
     currentRoom = roomName;
-    socket.emit('join-room', roomName); // send the room name to the server under the join-room event
-    currentRoomDisplay.textContent = `Current Room: ${roomName}`; // update the current room display
-    chatBox.innerHTML = ''; // Clear chat when joining new room
+    socket.emit('join-room', roomName);
+    currentRoomDisplay.textContent = `Current Room: ${roomName}`;
+    chatBox.innerHTML = '';
 }
 
 // Add handler for previous messages
@@ -111,20 +101,20 @@ socket.on('previous-messages', (messages) => {
 
 // Handle room updates
 socket.on('update-rooms', (rooms) => {
-    roomSelect.innerHTML = '<option value="">Select a room...</option>'; // clear the room select dropdown
-    rooms.forEach(room => { // for each room, create an option and add it to the dropdown
+    roomSelect.innerHTML = '<option value="">Select a room...</option>';
+    rooms.forEach(room => {
         const option = document.createElement('option');
         option.value = room.name;
         option.textContent = `${room.name} (Created by ${room.createdBy})`;
-        roomSelect.appendChild(option); // add the option to the dropdown
+        roomSelect.appendChild(option);
     });
 });
 
 // Handle room users
-socket.on('room-users', (data) => { // handle the room users event
-    if (data.room === currentRoom) { // if the room is the current room
+socket.on('room-users', (data) => {
+    if (data.room === currentRoom) {
         document.getElementById('online-users').textContent = 
-            `Online Users in ${data.room}: ${data.count}`; // update the online users display
+            `Online Users in ${data.room}: ${data.count}`;
     }
 });
 
@@ -149,7 +139,6 @@ function addMessageToChat(message, isSender) {
     const messageContainer = document.createElement('div');
     messageContainer.classList.add('message-container', isSender ? 'sent' : 'received');
 
-    // create message container
     messageContainer.innerHTML = `
         <div class="message-info">
             <span class="sender-name">${message.sender}</span>
@@ -158,7 +147,6 @@ function addMessageToChat(message, isSender) {
         <div class="message-bubble">${message.text}</div>
     `;
 
-    // add message to chat box
     chatBox.appendChild(messageContainer);
     chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -167,3 +155,31 @@ function addMessageToChat(message, isSender) {
 socket.on('chat-message', (message) => {
     addMessageToChat(message, false);
 });
+
+// Add logout functionality
+const logoutButton = document.createElement('button');
+logoutButton.textContent = 'Logout';
+logoutButton.classList.add('logout-button');
+logoutButton.onclick = () => {
+    localStorage.removeItem('username');
+    window.location.href = '/auth.html';
+};
+document.querySelector('.user-info').appendChild(logoutButton);
+
+// Add some CSS for the logout button
+const style = document.createElement('style');
+style.textContent = `
+    .logout-button {
+        background-color: #ff4444;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-left: 10px;
+    }
+    .logout-button:hover {
+        background-color: #cc0000;
+    }
+`;
+document.head.appendChild(style);

@@ -7,6 +7,8 @@ const ChatModel = require('../models/chat');
 const dotenv = require('dotenv');
 dotenv.config();
 
+// Add middleware to parse JSON bodies
+app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
 const server = app.listen(port, async () => {
@@ -25,26 +27,16 @@ io.on('connection', async (socket) => {
     console.log('A new user connected: ', socket.id);
     let currentRoom = null;
 
+    // Get username from the socket handshake query
+    const userName = socket.handshake.auth.username;
+    if (userName) {
+        onlineUsers.set(socket.id, userName);
+        io.emit('onlineUsers', onlineUsers.size);
+    }
+
     // Send the list of rooms to the new connected client
     const existingRooms = await ChatModel.getAllRooms();
     socket.emit('update-rooms', existingRooms);
-
-    // Handle username setting with uniqueness check
-    socket.on('set-name', async (name, callback) => {
-        try {
-            const userData = {
-                id: socket.id,
-                name,
-                lastSeen: new Date().toISOString()
-            };
-            await ChatModel.saveUser(socket.id, userData);
-            onlineUsers.set(socket.id, name);
-            io.emit('onlineUsers', onlineUsers.size);
-            callback({ success: true });
-        } catch (error) {
-            callback({ success: false, error: error.message });
-        }
-    });
 
     socket.on('create-room', async (roomName, callback) => {
         try {
@@ -115,5 +107,31 @@ io.on('connection', async (socket) => {
         onlineUsers.delete(socket.id);
         io.emit('onlineUsers', onlineUsers.size);
     });
+});
+
+// Authentication routes
+app.post('/auth/register', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await ChatModel.registerUser(username, password);
+        res.json({ success: true, user });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+app.post('/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await ChatModel.loginUser(username, password);
+        res.json({ success: true, user });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Rename index.html to chat.html and update the root route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/auth.html'));
 });
 

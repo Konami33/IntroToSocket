@@ -1,4 +1,5 @@
 const { redisClient } = require('../config/redis');
+const bcrypt = require('bcrypt');
 
 class ChatModel {
     static async saveMessage(roomId, message) {
@@ -45,8 +46,45 @@ class ChatModel {
         return Object.values(rooms).map(room => JSON.parse(room));
     }
 
+    static async registerUser(username, password) {
+        // Check if username exists
+        const exists = await this.isUsernameTaken(username);
+        if (exists) {
+            throw new Error('Username already taken');
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        const userData = {
+            username,
+            password: hashedPassword,
+            createdAt: new Date().toISOString()
+        };
+
+        // Save user data
+        await redisClient.hSet('users', username, JSON.stringify(userData));
+        return { username: userData.username, createdAt: userData.createdAt };
+    }
+
+    static async loginUser(username, password) {
+        const userData = await redisClient.hGet('users', username);
+        if (!userData) {
+            throw new Error('User not found');
+        }
+
+        const user = JSON.parse(userData);
+        const isValid = await bcrypt.compare(password, user.password);
+        
+        if (!isValid) {
+            throw new Error('Invalid password');
+        }
+
+        return { username: user.username, createdAt: user.createdAt };
+    }
+
     static async isUsernameTaken(username) {
-        return await redisClient.sIsMember('usernames', username);
+        return await redisClient.hExists('users', username);
     }
 
     static async saveUser(userId, userData) {
@@ -73,6 +111,16 @@ class ChatModel {
         if (userData) {
             await redisClient.sRem('usernames', userData.name);
             await redisClient.hDel('users', userId);
+        }
+    }
+
+    static async updateUserStatus(username, status) {
+        const userData = await redisClient.hGet('users', username);
+        if (userData) {
+            const user = JSON.parse(userData);
+            user.status = status;
+            user.lastSeen = new Date().toISOString();
+            await redisClient.hSet('users', username, JSON.stringify(user));
         }
     }
 }

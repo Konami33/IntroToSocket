@@ -129,8 +129,13 @@ function sendMessage() {
         sender: userName,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    socket.emit('message', message);
+    
+    // Add message to chat immediately for sender
     addMessageToChat(message, true);
+    
+    // Send to server
+    socket.emit('message', message);
+    
     messageInput.value = '';
 }
 
@@ -151,9 +156,12 @@ function addMessageToChat(message, isSender) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Receive message from server
+// Update the chat-message event handler
 socket.on('chat-message', (message) => {
-    addMessageToChat(message, false);
+    // Only add messages from others
+    if (message.sender !== userName) {
+        addMessageToChat(message, false);
+    }
 });
 
 // Add logout functionality

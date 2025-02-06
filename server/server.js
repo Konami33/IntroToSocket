@@ -39,12 +39,6 @@ let onlineUsers = new Map(); // map of online users
 let rooms = new Map(); // map of rooms
 
 // Subscribe to Redis channels
-RedisPubSubService.subscribe(CHANNELS.CHAT_MESSAGES, (message) => {
-    if (message.sourceServer !== SERVER_ID) {
-        io.to(message.room).emit('chat-message', message);
-    }
-});
-
 RedisPubSubService.subscribe(CHANNELS.ROOM_UPDATES, (update) => {
     io.emit('update-rooms', update.rooms);
 });
@@ -120,12 +114,9 @@ io.on('connection', async (socket) => {
             return;
         }
         const savedMessage = await ChatModel.saveMessage(currentRoom, message);
-        // Add server ID to the published message
-        await RedisPubSubService.publish(CHANNELS.CHAT_MESSAGES, {
-            ...savedMessage,
-            room: currentRoom,
-            sourceServer: SERVER_ID
-        });
+        
+        // Broadcast to all clients in the room (including other servers via Redis adapter)
+        io.to(currentRoom).emit('chat-message', savedMessage);
     });
 
     socket.on('disconnect', async () => {

@@ -8,6 +8,7 @@ const { connectRedis } = require('../src/config/redis');
 const ChatModel = require('../src/models/chat');
 const { RedisPubSubService, CHANNELS } = require('../src/services/redisPubSub');
 const dotenv = require('dotenv');
+const SERVER_ID = `server_${process.env.PORT}`;
 dotenv.config();
 
 
@@ -39,7 +40,9 @@ let rooms = new Map(); // map of rooms
 
 // Subscribe to Redis channels
 RedisPubSubService.subscribe(CHANNELS.CHAT_MESSAGES, (message) => {
-    io.to(message.room).emit('chat-message', message);
+    if (message.sourceServer !== SERVER_ID) {
+        io.to(message.room).emit('chat-message', message);
+    }
 });
 
 RedisPubSubService.subscribe(CHANNELS.ROOM_UPDATES, (update) => {
@@ -117,10 +120,11 @@ io.on('connection', async (socket) => {
             return;
         }
         const savedMessage = await ChatModel.saveMessage(currentRoom, message);
-        // Publish message to Redis
+        // Add server ID to the published message
         await RedisPubSubService.publish(CHANNELS.CHAT_MESSAGES, {
             ...savedMessage,
-            room: currentRoom
+            room: currentRoom,
+            sourceServer: SERVER_ID
         });
     });
 

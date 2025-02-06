@@ -2,10 +2,14 @@ const express = require('express');
 const app = express();
 const path = require('path');
 const port = process.env.PORT || 3000;
+const { createClient } = require('redis');
+const { createAdapter } = require('@socket.io/redis-adapter');
 const { connectRedis } = require('../src/config/redis');
 const ChatModel = require('../src/models/chat');
+const { RedisPubSubService, CHANNELS } = require('../src/services/redisPubSub');
 const dotenv = require('dotenv');
 dotenv.config();
+
 
 // Add middleware to parse JSON bodies
 app.use(express.json());
@@ -16,12 +20,35 @@ const server = app.listen(port, async () => {
     console.log(`Server is up on port ${port}`);
 });
 
+// Create Redis clients for Socket.IO adapter
+const pubClient = createClient({ url: process.env.REDIS_URL });
+const subClient = pubClient.duplicate();
 
+// Initialize Socket.IO with Redis adapter
 const io = require('socket.io')(server);
+
+// Wait for Redis clients to connect before setting up the adapter
+Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+    io.adapter(createAdapter(pubClient, subClient));
+    console.log('Socket.IO Redis adapter initialized');
+});
 
 // global variables
 let onlineUsers = new Map(); // map of online users
 let rooms = new Map(); // map of rooms
+
+// Subscribe to Redis channels
+RedisPubSubService.subscribe(CHANNELS.CHAT_MESSAGES, (message) => {
+    io.to(message.room).emit('chat-message', message);
+});
+
+RedisPubSubService.subscribe(CHANNELS.ROOM_UPDATES, (update) => {
+    io.emit('update-rooms', update.rooms);
+});
+
+RedisPubSubService.subscribe(CHANNELS.USER_STATUS, (status) => {
+    io.emit('onlineUsers', status.count);
+});
 
 io.on('connection', async (socket) => {
     console.log('A new user connected: ', socket.id);
@@ -47,7 +74,10 @@ io.on('connection', async (socket) => {
             await ChatModel.saveRoom(roomName, userName);
             rooms.set(roomName, new Set());
             const existingRooms = await ChatModel.getAllRooms();
-            io.emit('update-rooms', existingRooms);
+            // Publish room update
+            await RedisPubSubService.publish(CHANNELS.ROOM_UPDATES, {
+                rooms: existingRooms
+            });
             callback({ success: true });
         } catch (error) {
             callback({ success: false, error: error.message });
@@ -84,10 +114,14 @@ io.on('connection', async (socket) => {
 
     socket.on('message', async (message) => {
         if (!currentRoom || !onlineUsers.has(socket.id)) {
-            return; // Don't allow messages if not in a room or not registered
+            return;
         }
         const savedMessage = await ChatModel.saveMessage(currentRoom, message);
-        socket.to(currentRoom).emit('chat-message', savedMessage);
+        // Publish message to Redis
+        await RedisPubSubService.publish(CHANNELS.CHAT_MESSAGES, {
+            ...savedMessage,
+            room: currentRoom
+        });
     });
 
     socket.on('disconnect', async () => {

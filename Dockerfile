@@ -2,6 +2,9 @@ FROM node:18-alpine
 
 WORKDIR /usr/src/app
 
+# Install nodemon globally for development
+RUN npm install -g nodemon
+
 # Copy package files
 COPY package*.json ./
 
@@ -11,8 +14,8 @@ RUN npm install
 # Copy app source
 COPY . .
 
-# Expose port
-EXPOSE 3000
+# Make port configurable via environment variable
+EXPOSE ${PORT}
 
-# Start command
-CMD ["npm", "start"]
+# Use nodemon for development
+CMD ["sh", "-c", "nodemon server/server.js"]

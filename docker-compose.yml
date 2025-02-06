@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+
   redis:
     image: redis:latest
     ports:
@@ -15,6 +16,52 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  chat-server-1:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=development
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - chat_network
+    depends_on:
+      - redis
+
+  chat-server-2:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=development
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - chat_network
+    depends_on:
+      - redis
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - chat_network
+    depends_on:
+      - chat-server-1
+      - chat-server-2
+
+
 
   # redisinsight:
   #   image: redislabs/redisinsight:latest

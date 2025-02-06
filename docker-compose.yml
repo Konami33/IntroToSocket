@@ -16,6 +16,16 @@ services:
       timeout: 3s
       retries: 5
 
+  # redisinsight:
+  #   image: redislabs/redisinsight:latest
+  #   container_name: redisinsight
+  #   ports:
+  #     - "8002:8001"
+  #   networks:
+  #     - chat_network
+  #   depends_on:
+  #     - redis
+
   # chat-app:
   #   build:
   #     context: .

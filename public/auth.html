@@ -4,77 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat App - Login</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f2f5;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        .auth-container {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #333;
-        }
-
-        input {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-
-        button {
-            width: 100%;
-            padding: 0.75rem;
-            background-color: #0084ff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-top: 1rem;
-        }
-
-        button:hover {
-            background-color: #0066cc;
-        }
-
-        .toggle-form {
-            text-align: center;
-            margin-top: 1rem;
-            color: #666;
-        }
-
-        .toggle-form a {
-            color: #0084ff;
-            text-decoration: none;
-        }
-
-        .error-message {
-            color: #ff4444;
-            margin-top: 1rem;
-            text-align: center;
-        }
-    </style>
+    <link rel="stylesheet" href="auth.css">
 </head>
 <body>
     <div class="auth-container">
@@ -121,69 +51,6 @@
         </div>
     </div>
 
-    <script>
-        function toggleForms() {
-            const loginForm = document.getElementById('login-form');
-            const registerForm = document.getElementById('register-form');
-            loginForm.style.display = loginForm.style.display === 'none' ? 'block' : 'none';
-            registerForm.style.display = registerForm.style.display === 'none' ? 'block' : 'none';
-        }
-
-        async function handleLogin(event) {
-            event.preventDefault();
-            const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
-            const errorElement = document.getElementById('login-error');
-
-            try {
-                const response = await fetch('/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    localStorage.setItem('username', username);
-                    window.location.href = '/chat.html';
-                } else {
-                    errorElement.textContent = data.error;
-                }
-            } catch (error) {
-                errorElement.textContent = 'An error occurred. Please try again.';
-            }
-        }
-
-        async function handleRegister(event) {
-            event.preventDefault();
-            const username = document.getElementById('register-username').value;
-            const password = document.getElementById('register-password').value;
-            const confirmPassword = document.getElementById('register-confirm-password').value;
-            const errorElement = document.getElementById('register-error');
-
-            if (password !== confirmPassword) {
-                errorElement.textContent = 'Passwords do not match';
-                return;
-            }
-
-            try {
-                const response = await fetch('/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    localStorage.setItem('username', username);
-                    window.location.href = '/chat.html';
-                } else {
-                    errorElement.textContent = data.error;
-                }
-            } catch (error) {
-                errorElement.textContent = 'An error occurred. Please try again.';
-            }
-        }
-    </script>
+    <script src="js/auth.js"></script>
 </body>
 </html>

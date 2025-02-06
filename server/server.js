@@ -2,8 +2,8 @@ const express = require('express');
 const app = express();
 const path = require('path');
 const port = process.env.PORT || 3000;
-const { connectRedis } = require('../config/redis');
-const ChatModel = require('../models/chat');
+const { connectRedis } = require('../src/config/redis');
+const ChatModel = require('../src/models/chat');
 const dotenv = require('dotenv');
 dotenv.config();
 

@@ -1,3 +1,5 @@
+'use strict';
+
 const { redisClient } = require('../config/redis');
 const bcrypt = require('bcrypt');
 

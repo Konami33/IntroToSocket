@@ -6,10 +6,9 @@ const { createClient } = require('redis');
 const { createAdapter } = require('@socket.io/redis-adapter');
 const { connectRedis } = require('../src/config/redis');
 const ChatModel = require('../src/models/chat');
-const { RedisPubSubService, CHANNELS } = require('../src/services/redisPubSub');
 const dotenv = require('dotenv');
-const SERVER_ID = `server_${process.env.PORT}`;
 dotenv.config();
+const { redisClient } = require('../src/config/redis');
 
 
 // Add middleware to parse JSON bodies
@@ -38,14 +37,14 @@ Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
 let onlineUsers = new Map(); // map of online users
 let rooms = new Map(); // map of rooms
 
-// Subscribe to Redis channels
-RedisPubSubService.subscribe(CHANNELS.ROOM_UPDATES, (update) => {
-    io.emit('update-rooms', update.rooms);
-});
-
-RedisPubSubService.subscribe(CHANNELS.USER_STATUS, (status) => {
-    io.emit('onlineUsers', status.count);
-});
+// Track online users globally using Redis
+async function updateOnlineUsers(increment = true) {
+    const count = increment ? 
+        await redisClient.incr('online_users') : 
+        await redisClient.decr('online_users');
+    io.emit('onlineUsers', count);
+    return count;
+}
 
 io.on('connection', async (socket) => {
     console.log('A new user connected: ', socket.id);
@@ -55,7 +54,7 @@ io.on('connection', async (socket) => {
     const userName = socket.handshake.auth.username;
     if (userName) {
         onlineUsers.set(socket.id, userName);
-        io.emit('onlineUsers', onlineUsers.size);
+        await updateOnlineUsers(true);
     }
 
     // Send the list of rooms to the new connected client
@@ -71,10 +70,8 @@ io.on('connection', async (socket) => {
             await ChatModel.saveRoom(roomName, userName);
             rooms.set(roomName, new Set());
             const existingRooms = await ChatModel.getAllRooms();
-            // Publish room update
-            await RedisPubSubService.publish(CHANNELS.ROOM_UPDATES, {
-                rooms: existingRooms
-            });
+            // Use Socket.IO broadcast instead of Redis Pub/Sub
+            io.emit('update-rooms', existingRooms);
             callback({ success: true });
         } catch (error) {
             callback({ success: false, error: error.message });
@@ -133,8 +130,10 @@ io.on('connection', async (socket) => {
             }
         }
         await ChatModel.removeUser(socket.id);
-        onlineUsers.delete(socket.id);
-        io.emit('onlineUsers', onlineUsers.size);
+        if (onlineUsers.has(socket.id)) {
+            onlineUsers.delete(socket.id);
+            await updateOnlineUsers(false);
+        }
     });
 });
 
@@ -163,4 +162,7 @@ app.post('/auth/login', async (req, res) => {
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/auth.html'));
 });
+
+// Initialize online users count on server start
+redisClient.set('online_users', '0').catch(console.error);
 
